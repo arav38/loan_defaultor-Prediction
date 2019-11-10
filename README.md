@@ -1,126 +1,222 @@
+
+#importing the libraries
+
 import pandas as pd
 import numpy as np
+pd.set_option('display.max_columns',None)
+pd.set_option('display.max_rows',None)
 
-loan = pd.read_excel(r"C:\akshay\Data Science Final Project\XYZCorp_LendingData1.xlsx")
+#loading the data in system
+XYZ_DF=pd.read_csv(r"C:\akshay\Data Science Final Project\XYZCorp_LendingData (1).txt",header=0 ,
+                      delimiter="\t", low_memory=False)
 
-loan.head()
-    #making the copy of orignal file
-loan_copy = pd.DataFrame.copy(loan)
-loan_copy.shape
+# checking the number of variable and observation using shape command
+XYZ_DF.shape   #(855969, 73)
+# checking the data
+XYZ_DF.head(
+
+#create copy of data
+XYZ_DF_rev=pd.DataFrame.copy(XYZ_DF)
+XYZ_DF_rev.shape #(855969, 73)
+		  
+
+#Feature Selection
+# Out of 73 , few variables are not helpful or impactful in order to build a predictive model, hence dropping.
+
+XYZ_DF_rev.drop(['id','member_id','funded_amnt_inv','grade','emp_title','pymnt_plan','desc','title','addr_state',
+            'inq_last_6mths','mths_since_last_record','initial_list_status','mths_since_last_major_derog','policy_code',
+            'dti_joint','verification_status_joint','tot_coll_amt','tot_cur_bal','open_acc_6m','open_il_6m','open_il_12m'
+            ,'open_il_24m','mths_since_rcnt_il','total_bal_il','il_util','open_rv_12m','open_rv_24m',
+            'max_bal_bc','all_util','inq_fi','total_cu_tl','inq_last_12m'],axis=1,inplace=True)
+	    
+
+# checking the number of variable and observation using shape command
+XYZ_DF_rev.shape #(855969, 41)
+# checking the data
+#XYZ_DF_rev.head()	   
+
+# Checking if missing values are present and datatype of each variable.
+XYZ_DF_rev.isnull().sum()
+print(XYZ_DF_rev.dtypes)
+
+
+# Imputing missing data for Numerical with mean value / Zeros 
+XYZ_DF_rev['annual_inc_joint'].fillna(0,inplace=True)
+
+colname2=['mths_since_last_delinq','revol_util','collections_12_mths_ex_med',
+          'total_rev_hi_lim']
+for x in colname2[:]:
+    XYZ_DF_rev[x].fillna(XYZ_DF_rev[x].mean(),inplace=True)
     
-    #To get only half dataset
-half_count = len(loan_copy) / 2 
- ## Drop column's with more than 50% missing values
-loan_copy= loan_copy.dropna(thresh=half_count,axis=1)
-loan_copy.head()
+XYZ_DF_rev.isnull().sum()
+XYZ_DF_rev.shape 
 
-loan_copy.shape
+# Imputing missing data for Numerical with mean value / Zeros 
+XYZ_DF_rev['annual_inc_joint'].fillna(0,inplace=True)
 
-loan_copy.isnull().sum()
+colname2=['mths_since_last_delinq','revol_util','collections_12_mths_ex_med',
+          'total_rev_hi_lim']
+for x in colname2[:]:
+    XYZ_DF_rev[x].fillna(XYZ_DF_rev[x].mean(),inplace=True)
+    
+XYZ_DF_rev.isnull().sum()
+XYZ_DF_rev.shape
 
-loan_copy = loan_copy.drop(["last_credit_pull_d","next_pymnt_d","last_pymnt_d","id","member_id",'funded_amnt','funded_amnt_inv','emp_title'], axis = 1)
+# Label Encoding - to label all categorical variable value with numeric value
+#Label will get assigned in Ascending alphabetical of variable value
 
-for x in loan_copy[:]:
-    if loan_copy[x].dtype=='object':
-            loan_copy[x].fillna(loan_copy[x].mode()[0],inplace=True)
-    elif loan_copy[x].dtype=='int64' or loan_copy[x].dtype=='float64':
-            loan_copy[x].fillna(loan_copy[x].mean(),inplace=True)
-            
-loan_copy.isnull().sum()
-#loan_copy.emp_title.unique()
-    
-loan_copy['application_type'] = loan_copy['application_type'].replace({'INDIVIDUAL':1,'JOINT':2})
-loan_copy['grade'] = loan_copy['grade'].replace({'A':7,'B':6,'C':5,'D':4,'E':3,'F':2,'G':1})
-loan_copy["home_ownership"] = loan_copy["home_ownership"].replace({"MORTGAGE":6,"RENT":5,"OWN":4,"OTHER":3,"NONE":2,"ANY":1})
-loan_copy["emp_length"] = loan_copy["emp_length"].replace({'years':'','year':'',' ':'','<':'','\+':'','n/a':'0'}, regex = True)
-loan_copy["emp_length"] = loan_copy["emp_length"].apply(lambda x:int(x))
-print("Current shape of dataset :",loan_copy.shape)
-loan_copy.head()
-    
-    
-#converting ['issue_d'] into the datetime format 
-loan_copy.issue_d=pd.to_datetime(loan_copy.issue_d)
-col_name = 'issue_d'
-print(loan_copy[col_name].dtype)
-    
-    
-    
+colname1=['term','sub_grade','emp_length','home_ownership','verification_status',
+          'purpose','zip_code','earliest_cr_line','last_pymnt_d',
+          'next_pymnt_d','last_credit_pull_d','application_type']
 
-#pre-processing
-colname=[]
-for x in loan_copy.columns[:]:
-    if loan_copy[x].dtype=='object':
-        colname.append(x)
-colname
-
-## Preproccessig of data using sklearn library/Converting cat data to numeric
+XYZ_DF_rev.head()
 
 from sklearn import preprocessing
 
-le = preprocessing.LabelEncoder()
+le={}
 
-for x in colname:
+for x in colname1:
+     le[x]=preprocessing.LabelEncoder()
 
-    loan_copy[x] =le.fit_transform(loan_copy[x])
-    
-loan_copy.head()
+for x in colname1:
+     XYZ_DF_rev[x]=le[x].fit_transform(XYZ_DF_rev[x])
+XYZ_DF_rev.head()
 
-#split the data
-
-split_date = "2015-06-01"
-xyz_train=loan_copy.loc[loan_copy['issue_d'] < split_date]
-xyz_train=xyz_train.drop(['issue_d'],axis=1)
-xyz_train.shape   #(598978, 39)
-
-xyz_test=loan_copy.loc[loan_copy['issue_d'] >= split_date]
-xyz_test=xyz_test.drop(['issue_d'],axis=1)
-xyz_test.shape #(256991, 39)
+#Train and Test split
+#____________________________________________________________________________________________________________
+# issue_d is object datatype to make use for split converting issue_d in Date
+XYZ_DF_rev.issue_d = pd.to_datetime(XYZ_DF_rev.issue_d)   #%y-%m-%d
+col_name = 'issue_d'
+print (XYZ_DF_rev[col_name].dtype)
 
 
 
-X_train=xyz_train.values[:,:-1]
-Y_train=xyz_train.values[:,-1]
+#split data in train and test
+
+split_date = "2015-05-01"
+
+XYZ_training = XYZ_DF_rev.loc[XYZ_DF_rev['issue_d'] <= split_date]
+XYZ_training=XYZ_training.drop(['issue_d'],axis=1)
+#XYZ_training.head()
+XYZ_training.shape    #(598978, 40)
+
+XYZ_test = XYZ_DF_rev.loc[XYZ_DF_rev['issue_d'] > split_date]
+XYZ_test=XYZ_test.drop(['issue_d'],axis=1)
+#XYZ_test.head()
+XYZ_test.shape  #(256991, 40)
+
+
+
+#selecting X and Y
+
+X_train=XYZ_training.values[:,:-1]
+Y_train=XYZ_training.values[:,-1]
 Y_train=Y_train.astype(int)
 print(Y_train)
 
-
-X_test=xyz_test.values[:,:-1]
-Y_test=xyz_test.values[:,-1]
+X_test=XYZ_test.values[:,:-1]
+Y_test=XYZ_test.values[:,-1]
 Y_test=Y_test.astype(int)
 print(Y_test)
 
-
-#SCALING
-
-from sklearn.preprocessing import StandardScaler 
-
-scaler = StandardScaler()
-
-scaler.fit(X_train)
-
-X_train=scaler.transform(X_train)
-
-X_test=scaler.transform(X_test)
-
-#LOGISTIC REGRESSION 
-
+#all reg module includes in sklearn.linear_model
 from sklearn.linear_model import LogisticRegression
 #create a model
-classifier = LogisticRegression()
+classifier=LogisticRegression()
+colname=XYZ_DF_rev.columns[:]
 #fitting training data to the model
 classifier.fit(X_train,Y_train)
-
-Y_pred = classifier.predict(X_test)
-
-print(list(zip(Y_test,Y_pred)))
-#this gives the slope of each varibale 
-print(classifier.coef_)
-#this gives a intercept 
-print(classifier.intercept_)   
+#predicting on Test data
+Y_pred=classifier.predict(X_test)
+#print(list(zip(Y_test,Y_pred)))
 
 
-from sklearn.metrics import confusion_matrix, accuracy_score , classification_report
-
-cfm = confusion_matrix(Y_test,Y_pred)
-
+from sklearn.metrics import confusion_matrix, accuracy_score,classification_report
+#confusion_matrix
+cfm=confusion_matrix(Y_test,Y_pred)
 print(cfm)
+#classification_report
+print("Classification report: ")
+print(classification_report(Y_test,Y_pred))
+#accuracy_score
+acc=accuracy_score(Y_test, Y_pred)
+print("Accuracy of the model: ",acc)
+
+
+#predicting using the Decision_Tree_Classifier
+from sklearn.tree import DecisionTreeClassifier
+
+model_DecisionTree=DecisionTreeClassifier()
+model_DecisionTree.fit(X_train,Y_train)
+
+#fit the model on the data and predict the values
+Y_pred=model_DecisionTree.predict(X_test)
+
+
+
+
+#checking result
+from sklearn.metrics import confusion_matrix, accuracy_score,classification_report
+#confusion_matrix
+cfm=confusion_matrix(Y_test,Y_pred)
+print(cfm)
+#classification_report
+print("Classification report: ")
+print(classification_report(Y_test,Y_pred))
+#accuracy_score
+acc=accuracy_score(Y_test, Y_pred)
+print("Accuracy of the model: ",acc)
+
+
+from sklearn.ensemble import GradientBoostingClassifier
+
+model_GradientBoosting=GradientBoostingClassifier()
+#model_GradientBoosting=DecisionTreeClassifier()
+
+#fit the model on the data and predict the values
+model_GradientBoosting.fit(X_train,Y_train)
+
+Y_pred=model_GradientBoosting.predict(X_test)
+
+#checking result
+from sklearn.metrics import confusion_matrix, accuracy_score,classification_report
+#confusion_matrix
+cfm=confusion_matrix(Y_test,Y_pred)
+print(cfm)
+#classification_report
+print("Classification report: ")
+print(classification_report(Y_test,Y_pred))
+#accuracy_score
+acc=accuracy_score(Y_test, Y_pred)
+print("Accuracy of the model: ",acc)
+
+
+
+#predicting using the AdaBoost_Classifier
+from sklearn.ensemble import AdaBoostClassifier
+
+model_AdaBoost=(AdaBoostClassifier(base_estimator=LogisticRegression(),n_estimators=10))
+
+#base_estimator= specify algo
+#n_estimators= by default 50
+#fit the model on the data and predict the values
+model_AdaBoost.fit(X_train,Y_train)
+
+Y_pred=model_AdaBoost.predict(X_test)
+
+#checking result
+from sklearn.metrics import confusion_matrix, accuracy_score,classification_report
+#confusion_matrix
+cfm=confusion_matrix(Y_test,Y_pred)
+print(cfm)
+#classification_report
+print("Classification report: ")
+print(classification_report(Y_test,Y_pred))
+#accuracy_score
+acc=accuracy_score(Y_test, Y_pred)
+print("Accuracy of the model: ",acc)
+
+y_pred_df=Y_pred[:]
+#y_pred_df.columns=["Y Predicted value"]
+y_pred_df
+
